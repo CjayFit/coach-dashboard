@@ -1,24 +1,27 @@
 import { createClient } from '@supabase/supabase-js';
-import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY } from '$env/static/public';
+import { env } from '$env/dynamic/public';
 import type { Database } from './types';
 import { mockSupabaseClient } from './mockData';
 
+const url = env.PUBLIC_SUPABASE_URL?.replace(/"/g, '') || '';
+const key = env.PUBLIC_SUPABASE_ANON_KEY?.replace(/"/g, '') || '';
+
 // Vérifier si les clés Supabase sont configurées
 const isSupabaseConfigured = 
-	PUBLIC_SUPABASE_URL && 
-	PUBLIC_SUPABASE_URL !== 'https://your-project.supabase.co' &&
-	PUBLIC_SUPABASE_ANON_KEY && 
-	PUBLIC_SUPABASE_ANON_KEY !== 'your-anon-key-here';
+	url && 
+	url !== 'https://your-project.supabase.co' &&
+	key && 
+	key !== 'your-anon-key-here';
 
 // Créer le client Supabase ou utiliser le mock
 export const supabase = isSupabaseConfigured
-	? createClient<Database>(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY)
+	? createClient<Database>(url, key)
 	: (mockSupabaseClient as any);
 
 // Message de debug dans la console
 if (typeof window !== 'undefined') {
 	if (isSupabaseConfigured) {
-		console.log('✅ Supabase connecté:', PUBLIC_SUPABASE_URL);
+		console.log('✅ Supabase connecté:', url);
 	} else {
 		console.warn('⚠️ MODE DEMO: Données mockées utilisées. Configure Supabase dans .env pour la production.');
 	}
