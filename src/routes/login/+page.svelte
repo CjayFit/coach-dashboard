@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
-	import { getCurrentSession, getDemoClients, loginClient } from '$lib/clientPortal';
+	import { getCurrentSession, loginClient } from '$lib/clientPortal';
 
 	let email = $state('');
 	let password = $state('');
@@ -19,7 +19,7 @@
 		loading = true;
 		error = '';
 
-		const { error: loginError } = loginClient(email, password);
+		const { error: loginError } = await loginClient(email, password);
 
 		loading = false;
 
@@ -39,7 +39,7 @@
 						<span class="h-4 w-4 rounded-full bg-red-500"></span>
 					</span>
 					<div>
-						<p class="text-sm uppercase tracking-[0.3em] text-red-300">Le Cercle Discipline</p>
+						<p class="text-sm uppercase tracking-[0.3em] text-red-300">Le Cercle Discipliné</p>
 						<p class="text-xs text-gray-400">Portail client</p>
 					</div>
 				</div>
@@ -66,7 +66,7 @@
 
 		<section class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 lg:p-10">
 			<h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Connexion client</h2>
-			<p class="text-gray-600 dark:text-gray-400 mb-6">Utilisez une adresse démo ci-dessous. Le mot de passe peut être libre.</p>
+			<p class="text-gray-600 dark:text-gray-400 mb-6">Identifiants de démo : jean.dupont@demo.local / password123</p>
 
 			<form on:submit={handleLogin} class="space-y-6">
 				<div>
@@ -111,36 +111,6 @@
             <p class="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
                 Pas encore de compte? <a href="/register" class="font-medium text-red-600 hover:text-red-500">S'inscrire</a>
             </p>
-
-			<div class="mt-8">
-				<div class="relative">
-					<div class="absolute inset-0 flex items-center">
-						<div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
-					</div>
-					<div class="relative flex justify-center text-sm">
-						<span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">Ou continuer avec</span>
-					</div>
-				</div>
-
-				<div class="mt-6">
-					<div class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Comptes de démonstration</div>
-					<div class="grid gap-3">
-						{#each getDemoClients() as client}
-							<button
-								type="button"
-								on:click={() => {
-									email = client.email;
-									password = 'demo';
-								}}
-								class="text-left w-full rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition"
-							>
-								<div class="font-semibold text-gray-900 dark:text-white">{client.name}</div>
-								<div class="text-sm text-gray-500 dark:text-gray-400">{client.email}</div>
-							</button>
-						{/each}
-					</div>
-				</div>
-			</div>
 
 			<div class="mt-8 text-sm text-center text-gray-500 dark:text-gray-400">
 				Vous êtes coach ? <a href="/coach-login" class="text-red-600 dark:text-red-400 font-semibold hover:underline">Accéder à l’espace coach</a>

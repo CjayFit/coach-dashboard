@@ -13,7 +13,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>Le Cercle Discipline</title>
+	<title>Le Cercle Discipliné</title>
 </svelte:head>
 
 <div class="min-h-screen bg-gray-50 dark:bg-gray-900">

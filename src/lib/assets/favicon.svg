@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-	<title>Le Cercle Discipline</title>
+	<title>Le Cercle Discipliné</title>
 	<circle cx="64" cy="64" r="50" fill="#dc2626"/>
 	<circle cx="64" cy="64" r="30" fill="#991b1b" opacity="0.35"/>
 	<circle cx="64" cy="64" r="14" fill="#ffffff" opacity="0.9"/>

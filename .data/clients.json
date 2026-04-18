@@ -1,0 +1,52 @@
+[
+  {
+    "id": "client-jean",
+    "name": "Jean Dupont",
+    "email": "jean.dupont@demo.local",
+    "goal": "Prise de masse",
+    "targetCalories": 2800,
+    "targetProtein": 180,
+    "trainingTargetPerWeek": 4,
+    "passwordHash": "$2b$10$hoZiZN01tp1JWFVF0Nukme4hS1ne0uCv/x.ETXUC7rzS6wdTwIEuS"
+  },
+  {
+    "id": "client-marie",
+    "name": "Marie Martin",
+    "email": "marie.martin@demo.local",
+    "goal": "Recomposition corporelle",
+    "targetCalories": 2400,
+    "targetProtein": 140,
+    "trainingTargetPerWeek": 4,
+    "passwordHash": "$2b$10$hoZiZN01tp1JWFVF0Nukme4hS1ne0uCv/x.ETXUC7rzS6wdTwIEuS"
+  },
+  {
+    "id": "client-paul",
+    "name": "Paul Durand",
+    "email": "paul.durand@demo.local",
+    "goal": "Perte de gras",
+    "targetCalories": 2300,
+    "targetProtein": 160,
+    "trainingTargetPerWeek": 3,
+    "passwordHash": "$2b$10$hoZiZN01tp1JWFVF0Nukme4hS1ne0uCv/x.ETXUC7rzS6wdTwIEuS"
+  },
+  {
+    "id": "client-sean-1776467964763",
+    "name": "Sean",
+    "email": "sean@demo.local",
+    "goal": "him",
+    "targetCalories": 2000,
+    "targetProtein": 150,
+    "trainingTargetPerWeek": 3,
+    "passwordHash": "$2b$10$s8su352thsZ4tPIp9OHOIevpAEq/uue7NKeXBJB.PqjVF2okEQ6X6"
+  },
+  {
+    "id": "client-cjay-1776468076814",
+    "name": "Cjay",
+    "email": "coachcjay@demo.local",
+    "goal": "Perte 5% Bf",
+    "targetCalories": 2000,
+    "targetProtein": 150,
+    "trainingTargetPerWeek": 3,
+    "passwordHash": "$2b$10$ghRIodCwBp8Ew6uJC2Ytee4abraseGNCqCaLK/LQ50NcvtO6556Ve"
+  }
+]

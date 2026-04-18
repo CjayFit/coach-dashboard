@@ -4,7 +4,9 @@ export interface ClientProfile {
 	email: string;
 	goal: string;
 	targetCalories: number;
+	targetProtein: number;
 	trainingTargetPerWeek: number;
+	passwordHash: string;
 }
 
 export interface ClientSession {
@@ -19,6 +21,7 @@ export interface DailyEntry {
 	clientId: string;
 	date: string;
 	calories: number;
+	protein: number;
 	trainingCompleted: boolean;
 	weight: number | null;
 	notes: string;
@@ -27,15 +30,18 @@ export interface DailyEntry {
 
 const STORAGE_KEY_SESSION = 'client-portal-session';
 const STORAGE_KEY_ENTRIES = 'client-portal-daily-entries';
+const STORAGE_KEY_CLIENTS = 'client-portal-clients';
 
-const demoClients: ClientProfile[] = [
+let demoClients: ClientProfile[] = [
 	{
 		id: 'client-jean',
 		name: 'Jean Dupont',
 		email: 'jean.dupont@demo.local',
 		goal: 'Prise de masse',
 		targetCalories: 2800,
-		trainingTargetPerWeek: 4
+		targetProtein: 180,
+		trainingTargetPerWeek: 4,
+		passwordHash: '$2b$10$hoZiZN01tp1JWFVF0Nukme4hS1ne0uCv/x.ETXUC7rzS6wdTwIEuS'
 	},
 	{
 		id: 'client-marie',
@@ -43,7 +49,9 @@ const demoClients: ClientProfile[] = [
 		email: 'marie.martin@demo.local',
 		goal: 'Recomposition corporelle',
 		targetCalories: 2400,
-		trainingTargetPerWeek: 4
+		targetProtein: 140,
+		trainingTargetPerWeek: 4,
+		passwordHash: '$2b$10$hoZiZN01tp1JWFVF0Nukme4hS1ne0uCv/x.ETXUC7rzS6wdTwIEuS'
 	},
 	{
 		id: 'client-paul',
@@ -51,7 +59,9 @@ const demoClients: ClientProfile[] = [
 		email: 'paul.durand@demo.local',
 		goal: 'Perte de gras',
 		targetCalories: 2300,
-		trainingTargetPerWeek: 3
+		targetProtein: 160,
+		trainingTargetPerWeek: 3,
+		passwordHash: '$2b$10$hoZiZN01tp1JWFVF0Nukme4hS1ne0uCv/x.ETXUC7rzS6wdTwIEuS'
 	}
 ];
 
@@ -61,6 +71,7 @@ const defaultDailyEntries: DailyEntry[] = [
 		clientId: 'client-jean',
 		date: '2026-04-15',
 		calories: 2875,
+		protein: 185,
 		trainingCompleted: true,
 		weight: 71.8,
 		notes: 'Bonne journée et entraînement complet.',
@@ -71,6 +82,7 @@ const defaultDailyEntries: DailyEntry[] = [
 		clientId: 'client-jean',
 		date: '2026-04-16',
 		calories: 2740,
+		protein: 170,
 		trainingCompleted: false,
 		weight: null,
 		notes: 'Repos actif.',
@@ -81,6 +93,7 @@ const defaultDailyEntries: DailyEntry[] = [
 		clientId: 'client-marie',
 		date: '2026-04-16',
 		calories: 2410,
+		protein: 145,
 		trainingCompleted: true,
 		weight: 66.4,
 		notes: 'Séance réalisée en fin de journée.',
@@ -114,6 +127,16 @@ function writeJson<T>(key: string, value: T) {
 	localStorage.setItem(key, JSON.stringify(value));
 }
 
+function getStoredClients(): ClientProfile[] {
+	return readJson<ClientProfile[]>(STORAGE_KEY_CLIENTS, demoClients);
+}
+
+function setStoredClients(clients: ClientProfile[]) {
+	writeJson(STORAGE_KEY_CLIENTS, clients);
+}
+
+export { getStoredClients, setStoredClients };
+
 function getStoredEntries(): DailyEntry[] {
 	const rawEntries = readJson<Array<DailyEntry | (Omit<DailyEntry, 'weight'> & { weight?: number | null })>>(
 		STORAGE_KEY_ENTRIES,
@@ -140,6 +163,10 @@ function setStoredEntries(entries: DailyEntry[]) {
 function seedStorage() {
 	if (!isBrowser()) return;
 
+	if (!localStorage.getItem(STORAGE_KEY_CLIENTS)) {
+		setStoredClients(demoClients);
+	}
+
 	if (!localStorage.getItem(STORAGE_KEY_ENTRIES)) {
 		setStoredEntries(defaultDailyEntries);
 	}
@@ -150,41 +177,55 @@ if (isBrowser()) {
 }
 
 export function getDemoClients() {
-	return demoClients;
+	return getStoredClients();
 }
 
 export function getClientById(clientId: string) {
-	return demoClients.find((client) => client.id === clientId) ?? null;
+	return getStoredClients().find((client) => client && client.id === clientId) ?? null;
 }
 
 export function getClientByEmail(email: string) {
-	return demoClients.find((client) => client.email.toLowerCase() === email.trim().toLowerCase()) ?? null;
+	return getStoredClients().find((client) => client && client.email.toLowerCase() === email.trim().toLowerCase()) ?? null;
 }
 
 export function getCurrentSession() {
 	return readJson<ClientSession | null>(STORAGE_KEY_SESSION, null);
 }
 
-export function loginClient(email: string, password: string) {
-	const client = getClientByEmail(email);
+export async function loginClient(email: string, password: string) {
+	const response = await fetch('/api/auth/login', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ email, password })
+	});
 
-	if (!client) {
-		return { client: null, error: 'Aucun compte client trouvé pour cette adresse email.' };
+	const data = await response.json();
+
+	if (!response.ok || !data.client) {
+		return { client: null, error: data.error || 'Erreur de connexion' };
 	}
 
-	if (!password.trim()) {
-		return { client: null, error: 'Veuillez saisir un mot de passe.' };
-	}
-
+	// Save session to localStorage
 	const session: ClientSession = {
-		clientId: client.id,
-		email: client.email,
-		name: client.name,
+		clientId: data.client.id,
+		email: data.client.email,
+		name: data.client.name,
 		loggedAt: new Date().toISOString()
 	};
 
 	writeJson(STORAGE_KEY_SESSION, session);
-	return { client, error: null };
+
+	// Also make sure this client is in our local cache
+	const localClients = getStoredClients();
+	const existingClientIndex = localClients.findIndex(c => c && c.id === data.client.id);
+	if (existingClientIndex >= 0) {
+		localClients[existingClientIndex] = data.client;
+	} else {
+		localClients.push(data.client);
+	}
+	setStoredClients(localClients);
+
+	return { client: data.client, error: null };
 }
 
 export function logoutClient() {
@@ -192,49 +233,56 @@ export function logoutClient() {
 	localStorage.removeItem(STORAGE_KEY_SESSION);
 }
 
-export function getClientDailyEntries(clientId: string) {
-	return getStoredEntries()
-		.filter((entry) => entry.clientId === clientId)
-		.sort((a, b) => a.date.localeCompare(b.date));
+export async function getClientEntriesFromServer(clientId: string): Promise<DailyEntry[]> {
+	try {
+		const response = await fetch(`/api/entries?clientId=${clientId}`);
+		if (!response.ok) return [];
+		const data = await response.json();
+		return data.entries || [];
+	} catch (error) {
+		console.error('Error fetching entries:', error);
+		return [];
+	}
 }
 
-export function getTodayEntry(clientId: string) {
-	const today = getLocalDate();
-	return getClientDailyEntries(clientId).find((entry) => entry.date === today) ?? null;
-}
-
-export function saveDailyEntry(input: {
+export async function saveDailyEntry(input: {
 	clientId: string;
 	date: string;
 	calories: number;
+	protein: number;
 	trainingCompleted: boolean;
 	weight?: number | null;
 	notes: string;
 }) {
-	const entries = getStoredEntries();
-	const existingIndex = entries.findIndex(
-		(entry) => entry.clientId === input.clientId && entry.date === input.date
-	);
+	const response = await fetch('/api/entries', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(input)
+	});
 
-	const entry: DailyEntry = {
-		id: existingIndex >= 0 ? entries[existingIndex].id : Math.random().toString(36).slice(2, 10),
-		clientId: input.clientId,
-		date: input.date,
-		calories: input.calories,
-		trainingCompleted: input.trainingCompleted,
-		weight: input.weight ?? null,
-		notes: input.notes.trim(),
-		createdAt: new Date().toISOString()
-	};
-
-	if (existingIndex >= 0) {
-		entries[existingIndex] = entry;
-	} else {
-		entries.push(entry);
+	if (!response.ok) {
+		throw new Error('Impossible de sauvegarder');
 	}
 
-	setStoredEntries(entries);
-	return entry;
+	const data = await response.json();
+	return data.entry;
+}
+
+export async function getClientDailyEntries(clientId: string) {
+	return await getClientEntriesFromServer(clientId);
+}
+
+export async function getTodayEntry(clientId: string) {
+	const today = getLocalDate();
+	const entries = await getClientEntriesFromServer(clientId);
+	return entries.find((entry) => entry.date === today) ?? null;
+}
+
+export async function getClientWeightEntries(clientId: string) {
+	const entries = await getClientEntriesFromServer(clientId);
+	return entries
+		.filter((entry) => entry.weight !== null && entry.weight !== undefined)
+		.sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export function getTrainingStreak(entries: DailyEntry[]) {
@@ -259,25 +307,44 @@ export function getLocalIsoDate() {
 	return getLocalDate();
 }
 
-export function getClientWeightEntries(clientId: string) {
-	return getClientDailyEntries(clientId)
-		.filter((entry) => entry.weight !== null && entry.weight !== undefined)
-		.sort((a, b) => a.date.localeCompare(b.date));
+export async function registerClient(input: { name: string; email: string; goal: string; password: string; confirmPassword?: string }) {
+	const response = await fetch('/api/auth/register', {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(input)
+	});
+
+	const data = await response.json();
+
+	if (!response.ok) {
+		return { success: false, error: data.error };
+	}
+
+	// Cache the newly registered client locally so the dashboard can find it
+	const localClients = getStoredClients();
+	localClients.push(data.client);
+	setStoredClients(localClients);
+
+	return { success: true, error: null };
 }
 
-export function registerClient(input: { name: string; email: string; goal: string }) {
-	const newClient: ClientProfile = {
-		id: `client-${input.name.toLowerCase().replace(/\s/g, '-')}`,
-		name: input.name,
-		email: input.email,
-		goal: input.goal,
-		targetCalories: 2000, // Default value
-		trainingTargetPerWeek: 3 // Default value
-	};
-	// In a real app, this would be an API call.
-	// For demo purposes, we'll just log it.
-	console.log('New client registered:', newClient);
-	// Note: This won't persist without a proper backend or by modifying the mock data source.
-	// To make it work with the current structure, we would need to modify the `demoClients` array,
-	// but it's defined as a const. For a real-world scenario, this would be handled differently.
+export async function updateClient(clientId: string, updates: Partial<ClientProfile>) {
+	const response = await fetch('/api/clients', {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ clientId, updates })
+	});
+
+	const data = await response.json();
+
+	if (!response.ok) {
+		return { success: false, error: data.error };
+	}
+
+	// Refresh stored clients
+	const clients = getStoredClients();
+	const updatedClients = clients.map((c) => (c.id === clientId ? data.client : c));
+	setStoredClients(updatedClients);
+
+	return { success: true, error: null, client: data.client };
 }

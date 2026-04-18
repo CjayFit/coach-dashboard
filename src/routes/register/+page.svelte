@@ -1,25 +1,51 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { getClientByEmail, registerClient } from '$lib/clientPortal';
+	import { registerClient, loginClient } from '$lib/clientPortal';
 
 	let name = '';
 	let email = '';
 	let goal = '';
+	let password = '';
+	let confirmPassword = '';
 	let error = '';
+	let loading = false;
 
-	function handleSubmit() {
-		if (!name || !email || !goal) {
+	async function handleSubmit() {
+		if (!name || !email || !goal || !password || !confirmPassword) {
 			error = 'Tous les champs sont requis.';
 			return;
 		}
 
-		if (getClientByEmail(email)) {
-			error = 'Un client avec cet email existe déjà.';
+		if (password !== confirmPassword) {
+			error = 'Les mots de passe ne correspondent pas.';
 			return;
 		}
 
-		registerClient({ name, email, goal });
-		goto('/login');
+		if (password.length < 8) {
+			error = 'Le mot de passe doit contenir au moins 8 caractères.';
+			return;
+		}
+
+		// La vérification locale "getClientByEmail" a été supprimée. 
+		// C'est le serveur qui gèrera cela de façon sécurisée et logique.
+
+		loading = true;
+		const { success, error: registerError } = await registerClient({ name, email, goal, password, confirmPassword });
+		
+		if (registerError) {
+			error = registerError;
+			loading = false;
+		} else if (success) {
+			// Auto login après inscription réussie
+			const { error: loginError } = await loginClient(email, password);
+			loading = false;
+			
+			if (loginError) {
+				error = "Inscription réussie, mais échec de la connexion automatique: " + loginError;
+			} else {
+				goto('/dashboard');
+			}
+		}
 	}
 </script>
 
@@ -68,6 +94,30 @@
 					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
 				></textarea>
 			</div>
+			<div>
+				<label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+					>Mot de passe (minimum 8 caractères)</label
+				>
+				<input
+					type="password"
+					id="password"
+					bind:value={password}
+					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+					placeholder="Choisissez un mot de passe sécurisé"
+				/>
+			</div>
+			<div>
+				<label for="confirmPassword" class="block text-sm font-medium text-gray-700 dark:text-gray-300"
+					>Confirmer le mot de passe</label
+				>
+				<input
+					type="password"
+					id="confirmPassword"
+					bind:value={confirmPassword}
+					class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+					placeholder="Confirmez votre mot de passe"
+				/>
+			</div>
 
 			{#if error}
 				<p class="text-sm text-red-600">{error}</p>
@@ -76,9 +126,10 @@
 			<div>
 				<button
 					type="submit"
-					class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+					disabled={loading}
+					class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
 				>
-					S'inscrire
+					{loading ? 'Création du compte...' : 'S\'inscrire'}
 				</button>
 			</div>
 		</form>

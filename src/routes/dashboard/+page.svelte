@@ -28,6 +28,7 @@
 	let success = $state('');
 	let form = $state({
 		calories: 0,
+		protein: 0,
 		trainingCompleted: false,
 		weight: '' as number | string,
 		notes: ''
@@ -36,7 +37,7 @@
 
 	let recentEntries = $derived([...entries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7));
 	let todaysEntry = $derived(entries.find((entry) => entry.date === today) ?? null);
-	let weightEntries = $derived(client ? getClientWeightEntries(client.id).slice(-12) : []);
+	let weightEntries = $derived(client ? entries.filter(e => e.weight !== null && e.weight !== undefined && e.weight !== '').sort((a, b) => a.date.localeCompare(b.date)).slice(-12) : []);
 	let latestWeightEntry = $derived(weightEntries[weightEntries.length - 1] ?? null);
 	let daysSinceLastWeight = $derived(
 		latestWeightEntry
@@ -49,6 +50,9 @@
 	let averageCalories = $derived(
 		entries.length > 0 ? Math.round(entries.reduce((sum, entry) => sum + entry.calories, 0) / entries.length) : 0
 	);
+	let averageProtein = $derived(
+		entries.length > 0 ? Math.round(entries.reduce((sum, entry) => sum + entry.protein, 0) / entries.length) : 0
+	);
 	let trainingRate = $derived(
 		entries.length > 0 ? Math.round((entries.filter((entry) => entry.trainingCompleted).length / entries.length) * 100) : 0
 	);
@@ -60,7 +64,7 @@
 		const canvas = document.getElementById('weightProgressChart') as HTMLCanvasElement | null;
 		if (!canvas) return;
 
-		const data = getClientWeightEntries(client.id).slice(-12);
+		const data = entries.filter((e) => e.weight !== null && e.weight !== undefined && e.weight !== '').sort((a, b) => a.date.localeCompare(b.date)).slice(-12);
 		if (weightChart) {
 			weightChart.destroy();
 			weightChart = null;
@@ -118,7 +122,7 @@
 		});
 	}
 
-	onMount(() => {
+	onMount(async () => {
 		const session = getCurrentSession();
 
 		if (!session) {
@@ -134,10 +138,11 @@
 		}
 
 		client = profile;
-		entries = getClientDailyEntries(profile.id);
+		entries = await getClientDailyEntries(profile.id);
 		const todayEntry = entries.find((entry) => entry.date === today);
 		form = {
 			calories: todayEntry?.calories ?? profile.targetCalories,
+			protein: todayEntry?.protein ?? profile.targetProtein,
 			trainingCompleted: todayEntry?.trainingCompleted ?? false,
 			weight: todayEntry?.weight ?? '',
 			notes: todayEntry?.notes ?? ''
@@ -155,9 +160,9 @@
 		goto('/login');
 	}
 
-	function refreshEntries() {
+	async function refreshEntries() {
 		if (!client) return;
-		entries = getClientDailyEntries(client.id);
+		entries = await getClientDailyEntries(client.id);
 		setTimeout(renderWeightChart, 0);
 	}
 
@@ -180,6 +185,7 @@
 			clientId: client.id,
 			date: today,
 			calories: Number(form.calories),
+			protein: Number(form.protein),
 			trainingCompleted: form.trainingCompleted,
 			weight: form.weight === '' ? null : Number(form.weight),
 			notes: form.notes
@@ -200,7 +206,7 @@
 					<span class="h-3.5 w-3.5 rounded-full bg-red-500"></span>
 				</span>
 				<div>
-					<p class="text-sm text-red-600 dark:text-red-400 font-semibold uppercase tracking-wide">Le Cercle Discipline</p>
+					<p class="text-sm text-red-600 dark:text-red-400 font-semibold uppercase tracking-wide">Le Cercle Discipliné</p>
 					<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Tableau de bord client</h1>
 					<p class="text-sm text-gray-500 dark:text-gray-400">Bonjour {client?.name ?? 'client'}</p>
 				</div>
@@ -226,8 +232,16 @@
 					<div class="text-3xl font-bold text-gray-900 dark:text-white">{client.targetCalories}<span class="text-lg ml-1">kcal</span></div>
 				</div>
 				<div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
-					<div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Moyenne récente</div>
+					<div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Objectif protéines</div>
+					<div class="text-3xl font-bold text-gray-900 dark:text-white">{client.targetProtein}<span class="text-lg ml-1">g</span></div>
+				</div>
+				<div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
+					<div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Moy. Calories</div>
 					<div class="text-3xl font-bold text-blue-600 dark:text-blue-400">{averageCalories}<span class="text-lg ml-1">kcal</span></div>
+				</div>
+				<div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
+					<div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Moy. Protéines</div>
+					<div class="text-3xl font-bold text-blue-600 dark:text-blue-400">{averageProtein}<span class="text-lg ml-1">g</span></div>
 				</div>
 				<div class="bg-white dark:bg-gray-800 rounded-2xl shadow p-6">
 					<div class="text-sm text-gray-500 dark:text-gray-400 mb-1">Taux d'entraînement</div>
@@ -288,17 +302,31 @@
 					{/if}
 
 					<form onsubmit={handleSubmit} class="space-y-5">
-						<div>
-							<label for="calories" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Calories consommées</label>
-							<input
-								id="calories"
-								type="number"
-								min="0"
-								step="1"
-								bind:value={form.calories}
-								class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-								placeholder="2500"
-							/>
+						<div class="grid grid-cols-2 gap-4">
+							<div>
+								<label for="calories" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Calories</label>
+								<input
+									id="calories"
+									type="number"
+									min="0"
+									step="1"
+									bind:value={form.calories}
+									class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+									placeholder="2500"
+								/>
+							</div>
+							<div>
+								<label for="protein" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Protéines (g)</label>
+								<input
+									id="protein"
+									type="number"
+									min="0"
+									step="1"
+									bind:value={form.protein}
+									class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+									placeholder="180"
+								/>
+							</div>
 						</div>
 
 						<label class="flex items-center gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 px-4 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition">
@@ -347,6 +375,14 @@
 						<p class="text-gray-600 dark:text-gray-400 mb-6">{client.goal}</p>
 						<div class="space-y-3 text-sm">
 							<div class="flex items-center justify-between">
+								<span class="text-gray-500 dark:text-gray-400">Calories visées</span>
+								<span class="font-semibold text-gray-900 dark:text-white">{client.targetCalories} kcal</span>
+							</div>
+							<div class="flex items-center justify-between">
+								<span class="text-gray-500 dark:text-gray-400">Protéines visées</span>
+								<span class="font-semibold text-gray-900 dark:text-white">{client.targetProtein} g</span>
+							</div>
+							<div class="flex items-center justify-between">
 								<span class="text-gray-500 dark:text-gray-400">Séances visées / semaine</span>
 								<span class="font-semibold text-gray-900 dark:text-white">{client.trainingTargetPerWeek}</span>
 							</div>
@@ -369,7 +405,7 @@
 											<div class="font-semibold text-gray-900 dark:text-white">{formatDate(entry.date)}</div>
 											<div class="text-sm font-medium {entry.trainingCompleted ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}">{entry.trainingCompleted ? 'Entraînement fait' : 'Entraînement non fait'}</div>
 										</div>
-										<div class="text-sm text-gray-600 dark:text-gray-400">{entry.calories} kcal</div>
+										<div class="text-sm text-gray-600 dark:text-gray-400">{entry.calories} kcal / {entry.protein}g Protéines</div>
 										{#if entry.weight !== null && entry.weight !== undefined}
 											<div class="text-sm text-red-600 dark:text-red-400 mt-1 font-medium">Poids : {entry.weight} kg</div>
 										{/if}
