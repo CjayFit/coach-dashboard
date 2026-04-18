@@ -3,14 +3,14 @@ import { env } from '$env/dynamic/public';
 import type { Database } from './types';
 import { mockSupabaseClient } from './mockData';
 
-const url = env.PUBLIC_SUPABASE_URL?.replace(/"/g, '') || '';
-const key = env.PUBLIC_SUPABASE_ANON_KEY?.replace(/"/g, '') || '';
+const url = (env.PUBLIC_SUPABASE_URL || '').replace(/"/g, '').trim();
+const key = (env.PUBLIC_SUPABASE_ANON_KEY || '').replace(/"/g, '').trim();
 
 // Vérifier si les clés Supabase sont configurées
 const isSupabaseConfigured = 
-	url && 
+	url.startsWith('http') && 
 	url !== 'https://your-project.supabase.co' &&
-	key && 
+	key.length > 5 && 
 	key !== 'your-anon-key-here';
 
 // Créer le client Supabase ou utiliser le mock
