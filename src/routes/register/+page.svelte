@@ -10,7 +10,8 @@
 	let error = '';
 	let loading = false;
 
-	async function handleSubmit() {
+	async function handleSubmit(e: SubmitEvent) {
+		e.preventDefault();
 		if (!name || !email || !goal || !password || !confirmPassword) {
 			error = 'Tous les champs sont requis.';
 			return;
@@ -60,7 +61,7 @@
 					</div>
 		</div>
 
-		<form on:submit|preventDefault={handleSubmit} class="space-y-6">
+		<form onsubmit={handleSubmit} class="space-y-6">
 			<div>
 				<label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300"
 					>Nom complet</label
