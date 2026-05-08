@@ -1,42 +1,37 @@
+import { getDemoClients } from './clientPortal';
 import type { Client, WeeklyLog } from './types';
 
 // Données mockées pour développement/test
-export const mockClients: Client[] = [
+const demoClients = getDemoClients();
+export const mockClients: Client[] = demoClients.map((c) => ({
+	id: c.id,
+	email: c.email,
+	name: c.name,
+	goal: '',
+	target_calories: c.targetCalories,
+	target_protein: c.targetProtein,
+	training_target_per_week: c.trainingTargetPerWeek,
+	password_hash: c.passwordHash,
+	created_at: new Date().toISOString(),
+	coach_id: '550e8400-e29b-41d4-a716-446655440000'
+}));
+
+// Mock coach data
+export interface MockCoach {
+	id: string;
+	name: string;
+	email: string;
+	password_hash: string;
+	created_at: string;
+}
+
+export const mockCoaches: MockCoach[] = [
 	{
-		id: '1',
-		name: 'Jean Dupont',
-		start_date: '2026-01-01',
-		goal: 'Prise de masse',
-		start_weight: 70.0,
-		current_weight: 73.5,
-		training_adherence: 0.9,
-		protein_adherence: 0.85,
-		last_checkin: '2026-02-10',
-		created_at: '2026-01-01'
-	},
-	{
-		id: '2',
-		name: 'Marie Martin',
-		start_date: '2026-01-15',
-		goal: 'Force et hypertrophie',
-		start_weight: 65.0,
-		current_weight: 66.2,
-		training_adherence: 0.75,
-		protein_adherence: 0.70,
-		last_checkin: '2026-02-12',
-		created_at: '2026-01-15'
-	},
-	{
-		id: '3',
-		name: 'Paul Durand',
-		start_date: '2026-02-01',
-		goal: 'Prise de masse',
-		start_weight: 80.0,
-		current_weight: 78.5,
-		training_adherence: 0.50,
-		protein_adherence: 0.45,
-		last_checkin: '2026-02-13',
-		created_at: '2026-02-01'
+		id: '550e8400-e29b-41d4-a716-446655440000',
+		name: 'Admin Coach',
+		email: 'coach@lecerclediscipline.com',
+		password_hash: '$2b$10$hoZiZN01tp1JWFVF0Nukme4hS1ne0uCv/x.ETXUC7rzS6wdTwIEuS',
+		created_at: new Date().toISOString()
 	}
 ];
 
@@ -64,28 +59,74 @@ export const mockWeeklyLogs: WeeklyLog[] = [
 // Stockage persistant dans localStorage pour survivre aux recharges de module
 const STORAGE_KEY_CLIENTS = 'mockClients';
 const STORAGE_KEY_LOGS = 'mockLogs';
+const STORAGE_KEY_ENTRIES = 'mockEntries';
+const STORAGE_KEY_COACHES = 'mockCoaches';
+
+// Mock daily entries data
+export interface MockDailyEntry {
+	id: string;
+	client_id: string;
+	date: string;
+	calories: number;
+	protein: number;
+	training_completed: boolean;
+	weight: number | null;
+	notes: string;
+	created_at: string;
+}
+
+export const mockDailyEntries: MockDailyEntry[] = [
+	{
+		id: 'e1',
+		client_id: 'client-jean',
+		date: '2026-04-15',
+		calories: 2800,
+		protein: 180,
+		training_completed: true,
+		weight: 70.5,
+		notes: 'Bonne séance',
+		created_at: '2026-04-15'
+	},
+	{
+		id: 'e2',
+		client_id: 'client-jean',
+		date: '2026-04-16',
+		calories: 2750,
+		protein: 175,
+		training_completed: true,
+		weight: 70.7,
+		notes: 'Repos actif',
+		created_at: '2026-04-16'
+	}
+];
 
 // Initialiser depuis localStorage ou données par défaut
 function initializeStores() {
 	if (typeof window === 'undefined') {
-		return { clients: mockClients, logs: mockWeeklyLogs };
+		return { clients: mockClients, logs: mockWeeklyLogs, entries: mockDailyEntries, coaches: mockCoaches };
 	}
 
 	// Essayer de charger depuis localStorage
 	const storedClients = localStorage.getItem(STORAGE_KEY_CLIENTS);
 	const storedLogs = localStorage.getItem(STORAGE_KEY_LOGS);
+	const storedEntries = localStorage.getItem(STORAGE_KEY_ENTRIES);
+	const storedCoaches = localStorage.getItem(STORAGE_KEY_COACHES);
 
-	if (storedClients && storedLogs) {
+	if (storedClients && storedLogs && storedEntries && storedCoaches) {
 		console.log('✅ Loading data from localStorage');
 		return {
 			clients: JSON.parse(storedClients),
-			logs: JSON.parse(storedLogs)
+			logs: JSON.parse(storedLogs),
+			entries: JSON.parse(storedEntries),
+			coaches: JSON.parse(storedCoaches)
 		};
 	} else {
 		console.log('🔧 Initializing with default mock data');
-		const stores = { clients: mockClients, logs: mockWeeklyLogs };
+		const stores = { clients: mockClients, logs: mockWeeklyLogs, entries: mockDailyEntries, coaches: mockCoaches };
 		localStorage.setItem(STORAGE_KEY_CLIENTS, JSON.stringify(mockClients));
 		localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(mockWeeklyLogs));
+		localStorage.setItem(STORAGE_KEY_ENTRIES, JSON.stringify(mockDailyEntries));
+		localStorage.setItem(STORAGE_KEY_COACHES, JSON.stringify(mockCoaches));
 		return stores;
 	}
 }
@@ -103,6 +144,30 @@ function getLogsStore(): WeeklyLog[] {
 	const logs = stored ? JSON.parse(stored) : mockWeeklyLogs;
 	console.log('📊 Getting logs from localStorage:', logs.length, 'logs');
 	return logs;
+}
+
+function getEntriesStore(): MockDailyEntry[] {
+	if (typeof window === 'undefined') return mockDailyEntries;
+	const stored = localStorage.getItem(STORAGE_KEY_ENTRIES);
+	return stored ? JSON.parse(stored) : mockDailyEntries;
+}
+
+function setEntriesStore(entries: MockDailyEntry[]) {
+	if (typeof window === 'undefined') return;
+	console.log('💾 Saving', entries.length, 'entries to localStorage');
+	localStorage.setItem(STORAGE_KEY_ENTRIES, JSON.stringify(entries));
+}
+
+function getCoachesStore(): MockCoach[] {
+	if (typeof window === 'undefined') return mockCoaches;
+	const stored = localStorage.getItem(STORAGE_KEY_COACHES);
+	return stored ? JSON.parse(stored) : mockCoaches;
+}
+
+function setCoachesStore(coaches: MockCoach[]) {
+	if (typeof window === 'undefined') return;
+	console.log('💾 Saving', coaches.length, 'coaches to localStorage');
+	localStorage.setItem(STORAGE_KEY_COACHES, JSON.stringify(coaches));
 }
 
 function setClientsStore(clients: Client[]) {
@@ -123,6 +188,8 @@ export function resetMockData() {
 	console.log('🔄 Resetting mock data to defaults');
 	localStorage.setItem(STORAGE_KEY_CLIENTS, JSON.stringify(mockClients));
 	localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(mockWeeklyLogs));
+	localStorage.setItem(STORAGE_KEY_ENTRIES, JSON.stringify(mockDailyEntries));
+	localStorage.setItem(STORAGE_KEY_COACHES, JSON.stringify(mockCoaches));
 	console.log('✅ Mock data reset complete');
 }
 
@@ -135,48 +202,83 @@ export const mockSupabaseClient = {
 	from: (table: string) => {
 		if (table === 'clients') {
 			return {
-				select: (columns: string) => ({
+				select: (selectQuery = '*') => ({
 					order: (column: string) => {
-						const sorted = [...getClientsStore()].sort((a, b) => 
-							a.name.localeCompare(b.name)
-						);
+						console.log('📊 Mock: Selecting clients with order by', column);
+						const clients = getClientsStore();
+						console.log('📊 Mock: Found', clients.length, 'clients');
+						const sorted = [...clients].sort((a, b) => {
+							const aVal = a[column as keyof Client];
+							const bVal = b[column as keyof Client];
+							if (typeof aVal === 'string' && typeof bVal === 'string') {
+								return aVal.localeCompare(bVal);
+							}
+							return 0;
+						});
+						console.log('📊 Mock: Returning sorted clients:', sorted.map(c => c.email));
 						return Promise.resolve({ data: sorted, error: null });
 					},
-					eq: (column: string, value: any) => ({
-						single: () => {
-							const client = getClientsStore().find(c => c.id === value);
-							return Promise.resolve({ 
-								data: client || null, 
-								error: client ? null : { message: 'Client not found' }
+					eq: (column: string, value: any) => {
+						if (column === 'email') {
+							const client = getClientsStore().find((c) => c.email === value);
+							return Promise.resolve({
+								data: client ? [client] : [],
+								error: null
 							});
 						}
-					})
+						return {
+							single: () => {
+								const client = getClientsStore().find((c) => c.id === value);
+								return Promise.resolve({
+									data: client || null,
+									error: client ? null : { message: 'Client not found' }
+								});
+							}
+						};
+					}
 				}),
 				insert: (data: any) => {
-					const newClient = {
-						...data,
+					const newClientData = Array.isArray(data) ? data[0] : data;
+					console.log('📝 Mock registering new client:', newClientData.email);
+					
+					const newClient: Client = {
+						...newClientData,
 						id: Math.random().toString(36).substr(2, 9),
-						created_at: new Date().toISOString()
+						created_at: new Date().toISOString(),
+						name: newClientData.name || 'New Client',
+						coach_id: 'coach-1'
 					};
+					
 					const clients = getClientsStore();
 					clients.push(newClient);
 					setClientsStore(clients);
-					return Promise.resolve({ data: newClient, error: null });
+					console.log('✅ New client saved to mock storage:', newClient.email, '- Total clients:', clients.length);
+					
+					return {
+						select: () => {
+							console.log('📤 Mock returning inserted client:', newClient.email);
+							return Promise.resolve({ data: [newClient], error: null });
+						}
+					};
 				},
 				update: (data: any) => ({
 					eq: (column: string, value: any) => {
 						const clients = getClientsStore();
-						const index = clients.findIndex(c => c.id === value);
+						const index = clients.findIndex((c) => c.id === value);
 						if (index !== -1) {
 							clients[index] = { ...clients[index], ...data };
 							setClientsStore(clients);
 						}
-						return Promise.resolve({ data: null, error: null });
+						return {
+							select: () => ({
+								single: () => Promise.resolve({ data: clients[index] || null, error: null })
+							})
+						};
 					}
 				}),
 				delete: () => ({
 					eq: (column: string, value: any) => {
-						const clients = getClientsStore().filter(c => c.id !== value);
+						const clients = getClientsStore().filter((c) => c.id !== value);
 						setClientsStore(clients);
 						return Promise.resolve({ data: null, error: null });
 					}
@@ -237,6 +339,98 @@ export const mockSupabaseClient = {
 					console.log('🔍 Verification: localStorage has', verification.length, 'logs');
 					
 					return Promise.resolve({ data: newLog, error: null });
+				}
+			};
+		}
+		if (table === 'daily_entries') {
+			return {
+				select: (columns: string = '*') => ({
+					eq: (column: string, value: any) => ({
+						order: (orderColumn: string, options?: { ascending?: boolean }) => {
+							const entries = getEntriesStore();
+							console.log('🔍 Selecting daily entries for client:', value, '- Total entries in store:', entries.length);
+							const filtered = entries.filter(entry => entry.client_id === value);
+							console.log('✅ Found', filtered.length, 'entries for this client');
+							const ascending = options?.ascending !== false; // Par défaut true
+							const sorted = [...filtered].sort((a, b) => {
+								return ascending 
+									? a.date.localeCompare(b.date)
+									: b.date.localeCompare(a.date);
+							});
+							
+							const resultPromise: any = Promise.resolve({ data: sorted, error: null });
+							resultPromise.limit = (count: number) => {
+								return Promise.resolve({ data: sorted.slice(0, count), error: null });
+							};
+							return resultPromise;
+						}
+					})
+				}),
+				insert: (data: any) => {
+					console.log('📝 Inserting new daily entry:', data);
+					const newEntry: MockDailyEntry = {
+						...data,
+						id: Math.random().toString(36).substr(2, 9),
+						created_at: new Date().toISOString()
+					};
+					const entries = getEntriesStore();
+					entries.push(newEntry);
+					setEntriesStore(entries);
+					console.log('✅ New entry added. Total entries:', entries.length);
+					
+					return Promise.resolve({ data: newEntry, error: null });
+				},
+				update: (data: any) => ({
+					eq: (column: string, value: any) => {
+						const entries = getEntriesStore();
+						const index = entries.findIndex((e) => e.id === value);
+						if (index !== -1) {
+							entries[index] = { ...entries[index], ...data };
+							setEntriesStore(entries);
+						}
+						return {
+							select: () => ({
+								single: () => Promise.resolve({ data: entries[index] || null, error: null })
+							})
+						};
+					}
+				}),
+				delete: () => ({
+					eq: (column: string, value: any) => {
+						const entries = getEntriesStore().filter((e) => e.id !== value);
+						setEntriesStore(entries);
+						return Promise.resolve({ data: null, error: null });
+					}
+				})
+			};
+		}
+		if (table === 'coaches') {
+			return {
+				select: (columns: string = '*') => ({
+					eq: (column: string, value: any) => {
+						if (column === 'email') {
+							const coach = getCoachesStore().find((c) => c.email === value);
+							return Promise.resolve({
+								data: coach ? [coach] : [],
+								error: null
+							});
+						}
+						return {
+							single: () => {
+								const coach = getCoachesStore().find((c) => c.id === value);
+								return Promise.resolve({
+									data: coach || null,
+									error: coach ? null : { message: 'Coach not found' }
+								});
+							}
+						};
+					}
+				}),
+				order: (column: string) => {
+					const sorted = [...getCoachesStore()].sort((a, b) =>
+						a.name.localeCompare(b.name)
+					);
+					return Promise.resolve({ data: sorted, error: null });
 				}
 			};
 		}

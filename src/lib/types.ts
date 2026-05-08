@@ -6,38 +6,38 @@ export interface Database {
 			clients: {
 				Row: {
 					id: string;
+					email: string;
 					name: string;
-					start_date: string;
-					goal: string;
-					start_weight: number;
-					current_weight: number;
-					training_adherence: number;
-					protein_adherence: number;
-					last_checkin: string;
-					created_at?: string;
+					goal: string | null;
+					target_calories: number;
+					target_protein: number;
+					training_target_per_week: number;
+					password_hash: string;
+					coach_id: string | null;
+					created_at: string;
 				};
 				Insert: {
 					id?: string;
+					email: string;
 					name: string;
-					start_date: string;
-					goal: string;
-					start_weight: number;
-					current_weight: number;
-					training_adherence?: number;
-					protein_adherence?: number;
-					last_checkin: string;
+					goal?: string | null;
+					target_calories?: number;
+					target_protein?: number;
+					training_target_per_week?: number;
+					password_hash: string;
+					coach_id?: string | null;
 					created_at?: string;
 				};
 				Update: {
 					id?: string;
+					email?: string;
 					name?: string;
-					start_date?: string;
-					goal?: string;
-					start_weight?: number;
-					current_weight?: number;
-					training_adherence?: number;
-					protein_adherence?: number;
-					last_checkin?: string;
+					goal?: string | null;
+					target_calories?: number;
+					target_protein?: number;
+					training_target_per_week?: number;
+					password_hash?: string;
+					coach_id?: string | null;
 					created_at?: string;
 				};
 			};
@@ -80,7 +80,10 @@ export interface Database {
 	};
 }
 
-export type Client = Database['public']['Tables']['clients']['Row'];
+export type Client = Database['public']['Tables']['clients']['Row'] & {
+	first_name?: string;
+	last_name?: string;
+};
 export type WeeklyLog = Database['public']['Tables']['weekly_logs']['Row'];
 
 export type ClientStatus = 'green' | 'yellow' | 'red';

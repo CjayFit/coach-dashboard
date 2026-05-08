@@ -25,9 +25,6 @@ export interface CoachClientSummary extends ClientProfile {
 
 const STORAGE_KEY_COACH_SESSION = 'coach-portal-session';
 
-const COACH_EMAIL = 'coach@lecerclediscipline.com';
-const COACH_PASSWORD = 'mot-de-passe-coach-secret';
-
 function isBrowser() {
 	return typeof window !== 'undefined';
 }
@@ -51,23 +48,35 @@ export function getCurrentCoachSession() {
 	return readSession();
 }
 
-export function loginCoach(email: string, password: string) {
-	if (email.trim().toLowerCase() !== COACH_EMAIL) {
-		return { session: null, error: 'Compte coach introuvable.' };
+export async function loginCoach(email: string, password: string) {
+	try {
+		const response = await fetch('/api/auth/coach-login', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ email, password })
+		});
+
+		const data = await response.json();
+
+		if (!response.ok || !data.coach) {
+			return { session: null, error: data.error || 'Erreur de connexion' };
+		}
+
+		// Save session to localStorage
+		const session: CoachSession = {
+			email: data.coach.email,
+			name: data.coach.name,
+			loggedAt: new Date().toISOString()
+		};
+
+		writeSession(session);
+		console.log('✅ Coach logged in:', data.coach.email);
+
+		return { session, error: null };
+	} catch (error) {
+		console.error('Error logging in coach:', error);
+		return { session: null, error: 'Erreur de connexion' };
 	}
-
-	if (password.trim() !== COACH_PASSWORD) {
-		return { session: null, error: 'Mot de passe coach incorrect.' };
-	}
-
-	const session: CoachSession = {
-		email: COACH_EMAIL,
-		name: 'Admin Coach',
-		loggedAt: new Date().toISOString()
-	};
-
-	writeSession(session);
-	return { session, error: null };
 }
 
 export function logoutCoach() {
@@ -160,4 +169,68 @@ export async function getCoachKpis() {
 			: 0,
 		today
 	};
+}
+
+// Seed data
+export async function seedData() {
+	const demoClients = getDemoClients();
+	const clientEntries = demoClients.map(client => ({
+		clientId: client.id,
+		entries: [
+			{
+				date: '2024-01-01',
+				weight: 70,
+				calories: 200,
+				protein: 30,
+				trainingCompleted: true
+			},
+			{
+				date: '2024-01-02',
+				weight: 72,
+				calories: 250,
+				protein: 35,
+				trainingCompleted: false
+			}
+		]
+	}));
+
+	// Save demo clients to localStorage
+	localStorage.setItem('demo-clients', JSON.stringify(demoClients));
+
+	// Save demo entries to localStorage
+	localStorage.setItem('demo-entries', JSON.stringify(clientEntries));
+
+	console.log('✅ Demo data seeded');
+}
+
+// Seed data
+export async function seedDataWithEntries() {
+	const demoClients = getDemoClients();
+	const clientEntries = demoClients.map(client => ({
+		clientId: client.id,
+		entries: [
+			{
+				date: '2024-01-01',
+				weight: 70,
+				calories: 200,
+				protein: 30,
+				trainingCompleted: true
+			},
+			{
+				date: '2024-01-02',
+				weight: 72,
+				calories: 250,
+				protein: 35,
+				trainingCompleted: false
+			}
+		]
+	}));
+
+	// Save demo clients to localStorage
+	localStorage.setItem('demo-clients', JSON.stringify(demoClients));
+
+	// Save demo entries to localStorage
+	localStorage.setItem('demo-entries', JSON.stringify(clientEntries));
+
+	console.log('✅ Demo data seeded');
 }

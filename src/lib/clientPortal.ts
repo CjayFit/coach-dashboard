@@ -205,11 +205,23 @@ export async function loginClient(email: string, password: string) {
 		return { client: null, error: data.error || 'Erreur de connexion' };
 	}
 
+	// Convert the response to ClientProfile format
+	const clientProfile: ClientProfile = {
+		id: data.client.id,
+		name: data.client.name,
+		email: data.client.email,
+		goal: data.client.goal,
+		targetCalories: data.client.targetCalories,
+		targetProtein: data.client.targetProtein,
+		trainingTargetPerWeek: data.client.trainingTargetPerWeek,
+		passwordHash: '***stored_on_server***' // Placeholder - actual hash is on server
+	};
+
 	// Save session to localStorage
 	const session: ClientSession = {
-		clientId: data.client.id,
-		email: data.client.email,
-		name: data.client.name,
+		clientId: clientProfile.id,
+		email: clientProfile.email,
+		name: clientProfile.name,
 		loggedAt: new Date().toISOString()
 	};
 
@@ -217,15 +229,16 @@ export async function loginClient(email: string, password: string) {
 
 	// Also make sure this client is in our local cache
 	const localClients = getStoredClients();
-	const existingClientIndex = localClients.findIndex(c => c && c.id === data.client.id);
+	const existingClientIndex = localClients.findIndex((c) => c && c.id === clientProfile.id);
 	if (existingClientIndex >= 0) {
-		localClients[existingClientIndex] = data.client;
+		localClients[existingClientIndex] = clientProfile;
 	} else {
-		localClients.push(data.client);
+		localClients.push(clientProfile);
 	}
 	setStoredClients(localClients);
+	console.log('✅ Client logged in and cached locally:', clientProfile.email);
 
-	return { client: data.client, error: null };
+	return { client: clientProfile, error: null };
 }
 
 export function logoutClient() {
@@ -320,15 +333,38 @@ export async function registerClient(input: { name: string; email: string; goal:
 		return { success: false, error: data.error };
 	}
 
-	// Cache the newly registered client locally so the dashboard can find it
+	// Convert the response to ClientProfile format and cache locally
+	const clientProfile: ClientProfile = {
+		id: data.client.id,
+		name: data.client.name,
+		email: data.client.email,
+		goal: data.client.goal,
+		targetCalories: data.client.targetCalories,
+		targetProtein: data.client.targetProtein,
+		trainingTargetPerWeek: data.client.trainingTargetPerWeek,
+		passwordHash: '***stored_on_server***' // Placeholder - actual hash is on server
+	};
+
 	const localClients = getStoredClients();
-	localClients.push(data.client);
+	
+	// Check if client already exists
+	const existingIndex = localClients.findIndex(c => c.email === clientProfile.email);
+	if (existingIndex >= 0) {
+		localClients[existingIndex] = clientProfile;
+	} else {
+		localClients.push(clientProfile);
+	}
+	
 	setStoredClients(localClients);
+	console.log('✅ New client registered and cached locally:', clientProfile.email);
 
 	return { success: true, error: null };
 }
 
-export async function updateClient(clientId: string, updates: Partial<ClientProfile>) {
+export async function updateClient(
+	clientId: string,
+	updates: Partial<ClientProfile> & { weight?: number }
+) {
 	const response = await fetch('/api/clients', {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
