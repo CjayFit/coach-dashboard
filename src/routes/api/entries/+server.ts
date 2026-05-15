@@ -38,23 +38,29 @@ export async function POST({ request }) {
 
 	try {
 		// Insert or update (upsert) based on client_id and date unique constraint
-		const { data: savedEntry, error } = await supabase
+		const { data: savedEntries, error } = await supabase
 			.from('daily_entries')
-			.upsert({
-				client_id: body.clientId,
-				date: body.date,
-				calories: body.calories,
-				protein: body.protein,
-				training_completed: body.trainingCompleted,
-				weight: body.weight ?? null,
-				notes: body.notes || ''
-			}, {
-				onConflict: 'client_id,date'
-			})
-			.select()
-			.single();
+			.upsert(
+				{
+					client_id: body.clientId,
+					date: body.date,
+					calories: body.calories,
+					protein: body.protein,
+					training_completed: body.trainingCompleted,
+					weight: body.weight ?? null,
+					notes: body.notes || ''
+				},
+				{ onConflict: 'client_id,date' }
+			)
+			.select();
 
 		if (error) throw error;
+
+		const savedEntry = savedEntries?.[0];
+
+		if (!savedEntry) {
+			throw new Error('Failed to save or retrieve the entry.');
+		}
 
 		return json({
 			success: true,

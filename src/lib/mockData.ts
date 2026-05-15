@@ -401,7 +401,35 @@ export const mockSupabaseClient = {
 						setEntriesStore(entries);
 						return Promise.resolve({ data: null, error: null });
 					}
-				})
+				}),
+				upsert: (data: any, options: { onConflict: string }) => {
+					const entries = getEntriesStore();
+					const { onConflict } = options;
+					const conflictColumns = onConflict.split(',');
+
+					const findConflict = (entry: MockDailyEntry) => {
+						return conflictColumns.every(col => (entry as any)[col] === (data as any)[col]);
+					};
+
+					const existingIndex = entries.findIndex(findConflict);
+
+					if (existingIndex !== -1) {
+						// Update
+						entries[existingIndex] = { ...entries[existingIndex], ...data };
+						setEntriesStore(entries);
+						return Promise.resolve({ data: [entries[existingIndex]], error: null });
+					} else {
+						// Insert
+						const newEntry: MockDailyEntry = {
+							...data,
+							id: Math.random().toString(36).substr(2, 9),
+							created_at: new Date().toISOString()
+						};
+						entries.push(newEntry);
+						setEntriesStore(entries);
+						return Promise.resolve({ data: [newEntry], error: null });
+					}
+				}
 			};
 		}
 		if (table === 'coaches') {
